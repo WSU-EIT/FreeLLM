@@ -4,3 +4,9 @@
 
 @{
 }
+
+@code {
+    public void Dispose() {
+        Model.OnChange -= StateHasChanged;
+    }
+}
