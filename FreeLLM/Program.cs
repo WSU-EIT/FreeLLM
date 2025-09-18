@@ -164,7 +164,7 @@ namespace FreeLLM
                 app.UseHsts();
             }
 
-            app.UseHttpsRedirection();
+            //app.UseHttpsRedirection();
             
             //app.UseStaticFiles(); Replaced by the newer MapStaticAssets middleware.
             app.MapStaticAssets();
