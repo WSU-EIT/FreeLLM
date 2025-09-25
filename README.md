@@ -1,4 +1,4 @@
-﻿# FreeLLM — Open-source CRM/tenant framework (Blazor + EF Core)
+﻿# FreeLLM — An AI Prep tool - Open-source CRM/tenant framework (Blazor + EF Core)
 
 FreeLLM is a multi-tenant CRM-style web app and framework you can run as-is or extend to build your own line-of-business application. It’s built with **ASP.NET Core/Blazor**, **Entity Framework Core**, and **SignalR**, with a modular UI and a small set of helper APIs to accelerate common admin/developer workflows.
 
