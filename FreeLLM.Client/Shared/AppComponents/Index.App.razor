@@ -29,8 +29,8 @@ from Files.razor were removed because this lives under the index page.
                 <label id="directoryPathLabel" for="directoryPathInput" class="form-label">Enter Directory Path:</label>
                 <div class="input-group">
                     <input id="directoryPathInput" @bind="DirectoryPath" @bind:event="oninput"
-                           placeholder="e.g. C:\\Users\\YourName\\source\\repos\\YourProject"
-                           class="form-control" />
+                    placeholder="e.g. C:\\Users\\YourName\\source\\repos\\YourProject"
+                    class="form-control" />
                 </div>
             </section>
 
@@ -40,8 +40,8 @@ from Files.razor were removed because this lives under the index page.
                     Your Personal Modification Instructions:
                 </label>
                 <textarea id="modificationInstructionsInput" @bind="ModificationInstructions" @bind:event="oninput"
-                          placeholder="Enter your instructions for code modifications..."
-                          class="form-control" rows="3" aria-describedby="instructionsHelp"></textarea>
+                placeholder="Enter your instructions for code modifications..."
+                class="form-control" rows="3" aria-describedby="instructionsHelp"></textarea>
                 <div id="instructionsHelp" class="form-text">
                     These instructions will appear at the very top of the final update.
                 </div>
@@ -64,8 +64,8 @@ from Files.razor were removed because this lives under the index page.
                             @foreach(var opt in group) {
                                 <div class="form-check">
                                     <input class="form-check-input" type="checkbox" value="@opt.Key" id="chk_mod_@opt.Key"
-                                           checked="@SelectedModificationOptionKeys.Contains(opt.Key)"
-                                           @onchange="() => ToggleModificationOption(opt.Key)" />
+                                    checked="@SelectedModificationOptionKeys.Contains(opt.Key)"
+                                    @onchange="() => ToggleModificationOption(opt.Key)" />
                                     <label class="form-check-label" for="chk_mod_@opt.Key">
                                         <strong>@opt.Key</strong> – @opt.Description
                                     </label>
@@ -89,12 +89,8 @@ from Files.razor were removed because this lives under the index page.
 
             <!-- ChatGPT Model Selection -->
             <section class="mb-3">
-                <label for="chatGptModel" class="form-label">Select ChatGPT Model:</label>
-                <select id="chatGptModel" class="form-select" @bind="SelectedChatGptModel">
-                    @foreach(var model in ChatGptModels) {
-                        <option value="@model.Key">@model.Key (@model.Value lines)</option>
-                    }
-                </select>
+                <label for="chatGptModel" class="form-label">Select Number of Chunks:</label>
+                <input type="number" class="form-control" @bind="SelectedNumberOfChunks" min="1" />
             </section>
 
             <!-- Sorting Options -->
@@ -158,10 +154,10 @@ from Files.razor were removed because this lives under the index page.
             <section class="mb-3">
                 <label id="plainTextFilterLabel" for="plainTextFilterInput" class="form-label">Plain Text Search Filter:</label>
                 <input id="plainTextFilterInput"
-                       value="@plainTextFilter"
-                       placeholder="Enter text to search in file paths"
-                       class="form-control"
-                       @oninput="@(e => { plainTextFilter = e.Value?.ToString() ?? string.Empty; UpdateSummaryDebounced(); StateHasChanged(); })" />
+                value="@plainTextFilter"
+                placeholder="Enter text to search in file paths"
+                class="form-control"
+                @oninput="@(e => { plainTextFilter = e.Value?.ToString() ?? string.Empty; UpdateSummaryDebounced(); StateHasChanged(); })" />
             </section>
 
             <!-- Collapsible Filters & Stats -->
@@ -174,8 +170,8 @@ from Files.razor were removed because this lives under the index page.
                             @foreach(var type in fileTypes) {
                                 <div class="form-check me-3">
                                     <input type="checkbox" id="chk_@type" class="form-check-input"
-                                           @onchange="e => { ToggleFileType(type, e.Value); UpdateSummaryDebounced(); StateHasChanged(); }"
-                                           checked="@selectedFileTypes.Contains(type.ToLower())" />
+                                    @onchange="e => { ToggleFileType(type, e.Value); UpdateSummaryDebounced(); StateHasChanged(); }"
+                                    checked="@selectedFileTypes.Contains(type.ToLower())" />
                                     <label class="form-check-label" for="chk_@type">@type</label>
                                 </div>
                             }
@@ -211,10 +207,10 @@ from Files.razor were removed because this lives under the index page.
                     <div class="mb-3">
                         <label id="wildcardFilterLabel" for="wildcardFilterInput" class="form-label">Wildcard Filter (e.g. *.cs, */Views/*):</label>
                         <input id="wildcardFilterInput"
-                               value="@filterText"
-                               placeholder="Enter wildcard filter"
-                               class="form-control"
-                               @oninput="@(e => { filterText = e.Value?.ToString() ?? string.Empty; UpdateSummaryDebounced(); StateHasChanged(); })" />
+                        value="@filterText"
+                        placeholder="Enter wildcard filter"
+                        class="form-control"
+                        @oninput="@(e => { filterText = e.Value?.ToString() ?? string.Empty; UpdateSummaryDebounced(); StateHasChanged(); })" />
                         <div class="form-text">Common filters: *.cs, *.cshtml, *.js, *.css, *.razor, etc.</div>
                     </div>
                 </section>
@@ -237,7 +233,7 @@ from Files.razor were removed because this lives under the index page.
                         <li class="list-group-item">
                             <div class="form-check">
                                 <input type="checkbox" id="chk_file_@item.FileName" class="form-check-input"
-                                       @bind="item.IsSelected" @bind:event="oninput" />
+                                @bind="item.IsSelected" @bind:event="oninput" />
                                 <label class="form-check-label" for="chk_file_@item.FileName">
                                     @item.FullPath
                                     @if(fileSizeIndicators.ContainsKey(item.FullPath)) {
@@ -279,7 +275,7 @@ from Files.razor were removed because this lives under the index page.
                 @if(fileContentsSummaryChunks.Count == 1) {
                     <textarea class="form-control" rows="20" readonly aria-live="polite">
                         @fileContentsSummaryChunks[0]
-                        </textarea>
+                    </textarea>
                     <div class="mt-2 text-end">
                         <span style="background-color: @GetPreviewBackgroundColor(); padding: 0.25rem 0.5rem; border-radius: 0.25rem;">
                             Total: @overallLineCount lines, @overallCharCount characters
@@ -290,7 +286,7 @@ from Files.razor were removed because this lives under the index page.
                         <div class="mb-2">
                             <textarea class="form-control" rows="20" readonly aria-live="polite">
                                 @chunk.text
-                                    </textarea>
+                            </textarea>
                             <div class="text-end" style="font-size: smaller;">
                                 @{
                                     var chunkLineCount = chunk.text.Split('\n').Length;
@@ -501,19 +497,13 @@ I look forward to working with you to accomplish our goals on this project.
     #endregion
 
     #region ChatGPT Model & Sorting Options
-    private Dictionary<string, int> ChatGptModels = new Dictionary<string, int>
-    {
-        { "infinite", 0 },   // 0 = no chunking
-        { "long", 10000 },
-        { "medium", 8000 },
-        { "short", 3000 },
-    };
-    private string _selectedChatGptModel = "infinite";
-    private string SelectedChatGptModel {
-        get => _selectedChatGptModel;
+
+    private int _selectedNumberOfChunks = 1;
+    private int SelectedNumberOfChunks {
+        get => _selectedNumberOfChunks;
         set {
-            if(_selectedChatGptModel != value) {
-                _selectedChatGptModel = value;
+            if(_selectedNumberOfChunks != value) {
+                _selectedNumberOfChunks = value;
                 UpdateSummaryDebounced();
             }
         }
@@ -717,61 +707,90 @@ I look forward to working with you to accomplish our goals on this project.
     #region Helper Method: Splitting Summary into Chunks
     private List<string> SplitSummaryIntoChunks(string summary)
     {
-        int modelLimit = ChatGptModels.ContainsKey(SelectedChatGptModel) ? ChatGptModels[SelectedChatGptModel] : 7000;
-        if(modelLimit == 0) {
-            // infinite => do not split at all
-            return new List<string> { summary };
-        }
-        var lines = summary.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None).ToList();
-        int totalLines = lines.Count;
-        if(totalLines <= modelLimit) {
+        int chunkCount = Math.Max(1, SelectedNumberOfChunks);
+
+        // 1) Fast path: no splitting requested
+        if(chunkCount <= 1)
+        {
             return new List<string> { summary };
         }
 
-        List<List<string>> blocks = new();
-        List<string> currentBlock = new();
-        bool firstBlock = true;
+        // 2) Split into lines
+        var lines = summary.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None).ToList();
+        int totalLines = lines.Count;
+
+        // 3) Partition into "blocks" separated by lines that start with "----- "
+        //    (this preserves the preamble as block[0])
+        var blocks = new List<List<string>>();
+        var currentBlock = new List<string>();
         foreach(var line in lines) {
             if(line.StartsWith("----- ")) {
-                if(!firstBlock && currentBlock.Any()) {
+                if(currentBlock.Count > 0) {
                     blocks.Add(currentBlock);
-                    currentBlock = new();
+                    currentBlock = new List<string>();
                 }
-                firstBlock = false;
             }
             currentBlock.Add(line);
         }
-        if(currentBlock.Any()) {
+        if(currentBlock.Count > 0)
             blocks.Add(currentBlock);
-        }
 
-        double idealChunks = Math.Ceiling(totalLines / (double)modelLimit);
-        int idealChunkSize = (int)Math.Ceiling(totalLines / idealChunks);
+        // If we somehow failed to detect any blocks, just return the whole thing.
+        if(blocks.Count == 0)
+            return new List<string> { summary };
 
-        List<List<string>> chunks = new();
-        List<string> currentChunk = new();
-        int currentChunkLineCount = 0;
-        foreach(var block in blocks) {
-            if(currentChunkLineCount + block.Count > idealChunkSize && currentChunk.Any()) {
-                chunks.Add(currentChunk);
-                currentChunk = new();
-                currentChunkLineCount = 0;
+        // If there are fewer blocks than requested chunks, we’ll return one chunk per block.
+        // (If you want to split *inside* blocks to always reach chunkCount, we can add that later.)
+        int targetChunkCount = Math.Min(chunkCount, blocks.Count);
+
+        // 4) Greedy pack blocks into ~equal line-count chunks
+        int targetLinesPerChunk = (int)Math.Ceiling(totalLines / (double)targetChunkCount);
+
+        var chunks = new List<List<string>>();
+        var chunk = new List<string>();
+        int chunkLineCount = 0;
+
+        for(int i = 0; i < blocks.Count; i++) {
+            var block = blocks[i];
+            int remainingBlocks = blocks.Count - i;                 // including this one
+            int remainingChunks = targetChunkCount - chunks.Count;  // including the current one
+
+            // Ensure we leave at least one block for each remaining chunk.
+            bool mustBreakHere = (remainingBlocks - 1) >= (remainingChunks - 1)    // enough blocks left
+                                 && chunk.Count > 0
+                                 && (chunkLineCount + block.Count) > targetLinesPerChunk;
+
+            // Also force a break if keeping this block would starve remaining chunks of at least 1 block each
+            bool needToBreakToReserve = chunk.Count > 0
+                                        && (remainingBlocks - 1) == (remainingChunks - 1)
+                                        && (chunkLineCount > 0);
+
+            if((mustBreakHere || needToBreakToReserve) && chunks.Count < targetChunkCount - 1) {
+                chunks.Add(chunk);
+                chunk = new List<string>();
+                chunkLineCount = 0;
             }
-            currentChunk.AddRange(block);
-            currentChunkLineCount += block.Count;
-        }
-        if(currentChunk.Any()) {
-            chunks.Add(currentChunk);
+
+            chunk.AddRange(block);
+            chunkLineCount += block.Count;
         }
 
-        List<string> finalChunks = new();
+        if(chunk.Count > 0)
+            chunks.Add(chunk);
+
+        // It’s possible (e.g., tiny input) we ended with fewer than targetChunkCount chunks.
+        // That’s fine—we won’t split blocks further in this version.
+
+        // 5) Materialize chunks with headers
+        var result = new List<string>(chunks.Count);
         for(int i = 0; i < chunks.Count; i++) {
-            string header = $"=== Chunk {i + 1} of {chunks.Count} ===\nPlease wait until all chunks are received before responding.\n";
-            string chunkText = string.Join("\n", chunks[i]);
-            finalChunks.Add(header + "\n" + chunkText);
+            string header =
+                $"=== Chunk {i + 1} of {chunks.Count} ===\nPlease wait until all chunks are received before responding.\n";
+            result.Add(header + "\n" + string.Join("\n", chunks[i]));
         }
-        return finalChunks;
+        return result;
     }
+
     #endregion
 
     #region API Data Classes
