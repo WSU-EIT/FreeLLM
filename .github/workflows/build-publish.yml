@@ -16,7 +16,7 @@
 #   workflow (`on: workflow_call:`) or add `workflow_dispatch` inputs.
 # ============================================================================
 
-name: Build and Test
+name: Build and Publish
 
 # ---- Centralized workflow-wide variables (your "inputs") --------------------
 env:
