@@ -6,6 +6,7 @@ public partial class Program
     {
         var output = builder;
         // Add any app-specific modifications to the builder here.
+        output.Services.AddMemoryCache();
         return output;
     }
 

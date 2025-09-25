@@ -1,19 +1,19 @@
-﻿@implements IDisposable
+﻿@page "/files"
+@page "/{TenantCode}/files"
 @using System.Text.Json
 @using System.Text.RegularExpressions
-@using Humanizer
 @inject BlazorDataModel Model
 @inject HttpClient Http
 @inject IJSRuntime JS
 @inject NavigationManager NavManager
 
 <!--
-Index_App.razor (Merged from Files.razor)
+Files.razor
 
-This component moves the entire functionality of the former /files page
-into the home page's Index_App component. The UI, filters, selection,
-summary generation, and server calls are unchanged. Routing attributes
-from Files.razor were removed because this lives under the index page.
+This page now supports two modes:
+• Local File Mode – works as before, using the local file system.
+
+Other functionality (filtering, sorting, summary generation) remains largely unchanged.
 -->
 
 <main class="container py-3">
@@ -29,8 +29,8 @@ from Files.razor were removed because this lives under the index page.
                 <label id="directoryPathLabel" for="directoryPathInput" class="form-label">Enter Directory Path:</label>
                 <div class="input-group">
                     <input id="directoryPathInput" @bind="DirectoryPath" @bind:event="oninput"
-                           placeholder="e.g. C:\\Users\\YourName\\source\\repos\\YourProject"
-                           class="form-control" />
+                    placeholder="e.g. C:\Users\YourName\source\repos\YourProject"
+                    class="form-control" />
                 </div>
             </section>
 
@@ -40,13 +40,12 @@ from Files.razor were removed because this lives under the index page.
                     Your Personal Modification Instructions:
                 </label>
                 <textarea id="modificationInstructionsInput" @bind="ModificationInstructions" @bind:event="oninput"
-                          placeholder="Enter your instructions for code modifications..."
-                          class="form-control" rows="3" aria-describedby="instructionsHelp"></textarea>
+                placeholder="Enter your instructions for code modifications..."
+                class="form-control" rows="3" aria-describedby="instructionsHelp"></textarea>
                 <div id="instructionsHelp" class="form-text">
                     These instructions will appear at the very top of the final update.
                 </div>
             </section>
-
             <!-- Common Modification Phrases -->
             <section aria-labelledby="commonPhrasesLabel" class="mb-4">
                 <div class="d-flex justify-content-between align-items-center">
@@ -57,15 +56,18 @@ from Files.razor were removed because this lives under the index page.
                         @(showCommonPhrases ? "Hide" : "Show")
                     </button>
                 </div>
-                @if(showCommonPhrases) {
-                    @foreach(var group in ModificationOptions.GroupBy(opt => opt.Category)) {
+                @if (showCommonPhrases)
+                {
+                    @foreach (var group in ModificationOptions.GroupBy(opt => opt.Category))
+                    {
                         <div class="mb-3">
                             <h5>@group.Key</h5>
-                            @foreach(var opt in group) {
+                            @foreach (var opt in group)
+                            {
                                 <div class="form-check">
                                     <input class="form-check-input" type="checkbox" value="@opt.Key" id="chk_mod_@opt.Key"
-                                           checked="@SelectedModificationOptionKeys.Contains(opt.Key)"
-                                           @onchange="() => ToggleModificationOption(opt.Key)" />
+                                    checked="@SelectedModificationOptionKeys.Contains(opt.Key)"
+                                    @onchange="() => ToggleModificationOption(opt.Key)" />
                                     <label class="form-check-label" for="chk_mod_@opt.Key">
                                         <strong>@opt.Key</strong> – @opt.Description
                                     </label>
@@ -91,7 +93,8 @@ from Files.razor were removed because this lives under the index page.
             <section class="mb-3">
                 <label for="chatGptModel" class="form-label">Select ChatGPT Model:</label>
                 <select id="chatGptModel" class="form-select" @bind="SelectedChatGptModel">
-                    @foreach(var model in ChatGptModels) {
+                    @foreach (var model in ChatGptModels)
+                    {
                         <option value="@model.Key">@model.Key (@model.Value lines)</option>
                     }
                 </select>
@@ -158,10 +161,10 @@ from Files.razor were removed because this lives under the index page.
             <section class="mb-3">
                 <label id="plainTextFilterLabel" for="plainTextFilterInput" class="form-label">Plain Text Search Filter:</label>
                 <input id="plainTextFilterInput"
-                       value="@plainTextFilter"
-                       placeholder="Enter text to search in file paths"
-                       class="form-control"
-                       @oninput="@(e => { plainTextFilter = e.Value?.ToString() ?? string.Empty; UpdateSummaryDebounced(); StateHasChanged(); })" />
+                value="@plainTextFilter"
+                placeholder="Enter text to search in file paths"
+                class="form-control"
+                @oninput="@(e => { plainTextFilter = e.Value?.ToString() ?? string.Empty; UpdateSummaryDebounced(); StateHasChanged(); })" />
             </section>
 
             <!-- Collapsible Filters & Stats -->
@@ -171,11 +174,12 @@ from Files.razor were removed because this lives under the index page.
                     <fieldset class="border p-3">
                         <legend id="fileTypeFiltersLabel" class="w-auto px-2">File Type Filters:</legend>
                         <div class="d-flex flex-wrap">
-                            @foreach(var type in fileTypes) {
+                            @foreach (var type in fileTypes)
+                            {
                                 <div class="form-check me-3">
                                     <input type="checkbox" id="chk_@type" class="form-check-input"
-                                           @onchange="e => { ToggleFileType(type, e.Value); UpdateSummaryDebounced(); StateHasChanged(); }"
-                                           checked="@selectedFileTypes.Contains(type.ToLower())" />
+                                    @onchange="e => { ToggleFileType(type, e.Value); UpdateSummaryDebounced(); StateHasChanged(); }"
+                                    checked="@selectedFileTypes.Contains(type.ToLower())" />
                                     <label class="form-check-label" for="chk_@type">@type</label>
                                 </div>
                             }
@@ -192,7 +196,8 @@ from Files.razor were removed because this lives under the index page.
                     <fieldset class="border p-3">
                         <legend id="ignoredFoldersLabel" class="w-auto px-2">Ignored Folders:</legend>
                         <div class="d-flex flex-wrap">
-                            @foreach(var folder in ignoredFolders) {
+                            @foreach (var folder in ignoredFolders)
+                            {
                                 <span class="badge bg-secondary me-2">
                                     @folder
                                     <button type="button" class="btn-close btn-close-white btn-sm ms-1" aria-label="Remove" @onclick="() => RemoveIgnoredFolder(folder)"></button>
@@ -211,10 +216,10 @@ from Files.razor were removed because this lives under the index page.
                     <div class="mb-3">
                         <label id="wildcardFilterLabel" for="wildcardFilterInput" class="form-label">Wildcard Filter (e.g. *.cs, */Views/*):</label>
                         <input id="wildcardFilterInput"
-                               value="@filterText"
-                               placeholder="Enter wildcard filter"
-                               class="form-control"
-                               @oninput="@(e => { filterText = e.Value?.ToString() ?? string.Empty; UpdateSummaryDebounced(); StateHasChanged(); })" />
+                        value="@filterText"
+                        placeholder="Enter wildcard filter"
+                        class="form-control"
+                        @oninput="@(e => { filterText = e.Value?.ToString() ?? string.Empty; UpdateSummaryDebounced(); StateHasChanged(); })" />
                         <div class="form-text">Common filters: *.cs, *.cshtml, *.js, *.css, *.razor, etc.</div>
                     </div>
                 </section>
@@ -233,14 +238,16 @@ from Files.razor were removed because this lives under the index page.
             <section aria-labelledby="fileListLabel" class="mb-4">
                 <h2 id="fileListLabel" class="h5">Available Files:</h2>
                 <ul class="list-group">
-                    @foreach(var item in FilteredFiles) {
+                    @foreach (var item in FilteredFiles)
+                    {
                         <li class="list-group-item">
                             <div class="form-check">
                                 <input type="checkbox" id="chk_file_@item.FileName" class="form-check-input"
-                                       @bind="item.IsSelected" @bind:event="oninput" />
+                                @bind="item.IsSelected" @bind:event="oninput" />
                                 <label class="form-check-label" for="chk_file_@item.FileName">
                                     @item.FullPath
-                                    @if(fileSizeIndicators.ContainsKey(item.FullPath)) {
+                                    @if (fileSizeIndicators.ContainsKey(item.FullPath))
+                                    {
                                         <span class="badge ms-2" style="background-color: @GetFileBadgeColor(item);">
                                             <i class="fa-solid fa-signal"></i> @fileSizeIndicators[item.FullPath]
                                         </span>
@@ -262,35 +269,41 @@ from Files.razor were removed because this lives under the index page.
                         <button class="btn btn-outline-success" @onclick="CopySummary" title="Copy update to clipboard">
                             <i class="fa-solid fa-copy"></i> Copy
                         </button>
-                        @if(fileContentsSummaryChunks.Count > 1) {
+                        @if (fileContentsSummaryChunks.Count > 1)
+                        {
                             <span class="ms-2" style="background-color: @GetPreviewBackgroundColor(); padding: 0.25rem 0.5rem; border-radius: 0.25rem;">
                                 Total: @overallLineCount lines, @overallCharCount characters
                             </span>
                         }
                     </div>
                 </div>
-                @if(isUpdating) {
+                @if (isUpdating)
+                {
                     <div class="spinner-overlay">
                         <div class="spinner-border text-primary" role="status">
                             <span class="visually-hidden">Loading...</span>
                         </div>
                     </div>
                 }
-                @if(fileContentsSummaryChunks.Count == 1) {
+                @if (fileContentsSummaryChunks.Count == 1)
+                {
                     <textarea class="form-control" rows="20" readonly aria-live="polite">
                         @fileContentsSummaryChunks[0]
-                        </textarea>
+                    </textarea>
                     <div class="mt-2 text-end">
                         <span style="background-color: @GetPreviewBackgroundColor(); padding: 0.25rem 0.5rem; border-radius: 0.25rem;">
                             Total: @overallLineCount lines, @overallCharCount characters
                         </span>
                     </div>
-                } else if(fileContentsSummaryChunks.Count > 1) {
-                    @foreach(var chunk in fileContentsSummaryChunks.Select((text, index) => new { text, index })) {
+                }
+                else if (fileContentsSummaryChunks.Count > 1)
+                {
+                    @foreach (var chunk in fileContentsSummaryChunks.Select((text, index) => new { text, index }))
+                    {
                         <div class="mb-2">
                             <textarea class="form-control" rows="20" readonly aria-live="polite">
                                 @chunk.text
-                                    </textarea>
+                            </textarea>
                             <div class="text-end" style="font-size: smaller;">
                                 @{
                                     var chunkLineCount = chunk.text.Split('\n').Length;
@@ -307,31 +320,18 @@ from Files.razor were removed because this lives under the index page.
 </main>
 
 @code {
-    // NOTE: Removed routing/Parameter(TenantCode). Index page already sets Model.TenantCodeFromUrl.
-
-    #region IDisposable subscription to Model changes (optional)
-    public void Dispose()
-    {
-        Model.OnChange -= OnDataModelUpdated;
-    }
-
-    protected override void OnInitialized()
-    {
-        Model.OnChange += OnDataModelUpdated;
-    }
-
-    private void OnDataModelUpdated()
-    {
-        StateHasChanged();
-    }
-    #endregion
-
     #region Parameters & Basic Page State
+    [Parameter] public string? TenantCode { get; set; }
+    protected string _pageName = "files";
+
     private string _modificationInstructions = "";
-    private string ModificationInstructions {
+    private string ModificationInstructions
+    {
         get => _modificationInstructions;
-        set {
-            if(_modificationInstructions != value) {
+        set
+        {
+            if (_modificationInstructions != value)
+            {
                 _modificationInstructions = value;
                 UpdateSummaryDebounced();
             }
@@ -342,7 +342,7 @@ from Files.razor were removed because this lives under the index page.
     {
         // Cast the value to bool to determine if the checkbox is checked.
         bool isChecked = (bool)value;
-        if(isChecked)
+        if (isChecked)
             selectedFileTypes.Add(type.ToLower());
         else
             selectedFileTypes.Remove(type.ToLower());
@@ -358,9 +358,10 @@ from Files.razor were removed because this lives under the index page.
 
     private void AddIgnoredFolder()
     {
-        if(!string.IsNullOrWhiteSpace(customIgnoredFolder)) {
+        if (!string.IsNullOrWhiteSpace(customIgnoredFolder))
+        {
             var folder = customIgnoredFolder.Trim().ToLower();
-            if(!ignoredFolders.Contains(folder))
+            if (!ignoredFolders.Contains(folder))
                 ignoredFolders.Add(folder);
             customIgnoredFolder = "";
             UpdateSummaryDebounced();
@@ -370,9 +371,10 @@ from Files.razor were removed because this lives under the index page.
 
     private void AddCustomFileType()
     {
-        if(!string.IsNullOrWhiteSpace(customFileType)) {
+        if (!string.IsNullOrWhiteSpace(customFileType))
+        {
             var type = customFileType.Trim().ToLower();
-            if(!fileTypes.Contains(type))
+            if (!fileTypes.Contains(type))
                 fileTypes.Add(type);
             selectedFileTypes.Add(type);
             customFileType = "";
@@ -383,11 +385,14 @@ from Files.razor were removed because this lives under the index page.
 
 
     // Local Files state
-    private string _directoryPath = @"C:\\Repos\\FileGpt";
-    private string DirectoryPath {
+    private string _directoryPath = @"C:\Repos\FileGpt";
+    private string DirectoryPath
+    {
         get => _directoryPath;
-        set {
-            if(_directoryPath != value) {
+        set
+        {
+            if (_directoryPath != value)
+            {
                 _directoryPath = value;
                 _ = LoadFiles();
             }
@@ -453,10 +458,13 @@ I look forward to working with you to accomplish our goals on this project.
     private Dictionary<string, string> fileSizeIndicators = new();
 
     private string _additionalRequest = "";
-    private string AdditionalRequest {
+    private string AdditionalRequest
+    {
         get => _additionalRequest;
-        set {
-            if(_additionalRequest != value) {
+        set
+        {
+            if (_additionalRequest != value)
+            {
                 _additionalRequest = value;
                 UpdateSummaryDebounced();
             }
@@ -475,7 +483,7 @@ I look forward to working with you to accomplish our goals on this project.
     private void ToggleCommonPhrases() => showCommonPhrases = !showCommonPhrases;
     private void ToggleModificationOption(string key)
     {
-        if(SelectedModificationOptionKeys.Contains(key))
+        if (SelectedModificationOptionKeys.Contains(key))
             SelectedModificationOptionKeys.Remove(key);
         else
             SelectedModificationOptionKeys.Add(key);
@@ -489,10 +497,13 @@ I look forward to working with you to accomplish our goals on this project.
     private string SelectedToolAction { get; set; } = "summarize";
 
     private bool _showFullFileList = false;
-    private bool ShowFullFileList {
+    private bool ShowFullFileList
+    {
         get => _showFullFileList;
-        set {
-            if(_showFullFileList != value) {
+        set
+        {
+            if (_showFullFileList != value)
+            {
                 _showFullFileList = value;
                 UpdateSummaryDebounced();
             }
@@ -502,16 +513,19 @@ I look forward to working with you to accomplish our goals on this project.
 
     #region ChatGPT Model & Sorting Options
     private Dictionary<string, int> ChatGptModels = new Dictionary<string, int>
-        {
+    {
         { "long", 10000 },
         { "medium", 8000 },
         { "short", 3000 },
     };
     private string _selectedChatGptModel = "long";
-    private string SelectedChatGptModel {
+    private string SelectedChatGptModel
+    {
         get => _selectedChatGptModel;
-        set {
-            if(_selectedChatGptModel != value) {
+        set
+        {
+            if (_selectedChatGptModel != value)
+            {
                 _selectedChatGptModel = value;
                 UpdateSummaryDebounced();
             }
@@ -519,20 +533,26 @@ I look forward to working with you to accomplish our goals on this project.
     }
 
     private string _sortOption = "Name";
-    private string SortOption {
+    private string SortOption
+    {
         get => _sortOption;
-        set {
-            if(_sortOption != value) {
+        set
+        {
+            if (_sortOption != value)
+            {
                 _sortOption = value;
                 UpdateSummaryDebounced();
             }
         }
     }
     private string _sortDirection = "asc";
-    private string SortDirection {
+    private string SortDirection
+    {
         get => _sortDirection;
-        set {
-            if(_sortDirection != value) {
+        set
+        {
+            if (_sortDirection != value)
+            {
                 _sortDirection = value;
                 UpdateSummaryDebounced();
             }
@@ -545,11 +565,11 @@ I look forward to working with you to accomplish our goals on this project.
     {
         int limit = ChatGptModels.ContainsKey(SelectedChatGptModel) ? ChatGptModels[SelectedChatGptModel] : 7000;
         double ratio = overallLineCount / (double)limit;
-        if(ratio < 0.5)
+        if (ratio < 0.5)
             return "lightgreen";
-        else if(ratio < 0.7)
+        else if (ratio < 0.7)
             return "lightyellow";
-        else if(ratio < 0.9)
+        else if (ratio < 0.9)
             return "lightsalmon";
         else
             return "lightcoral";
@@ -558,11 +578,11 @@ I look forward to working with you to accomplish our goals on this project.
     {
         int limit = ChatGptModels.ContainsKey(SelectedChatGptModel) ? ChatGptModels[SelectedChatGptModel] : 7000;
         double ratio = (file.LineCount ?? 0) / (double)limit;
-        if(ratio < 0.5)
+        if (ratio < 0.5)
             return "lightgreen";
-        else if(ratio < 0.7)
+        else if (ratio < 0.7)
             return "lightyellow";
-        else if(ratio < 0.9)
+        else if (ratio < 0.9)
             return "lightsalmon";
         else
             return "lightcoral";
@@ -574,7 +594,8 @@ I look forward to working with you to accomplish our goals on this project.
     private void UpdateSummaryDebounced()
     {
         debounceTimer?.Dispose();
-        debounceTimer = new System.Threading.Timer(async _ => {
+        debounceTimer = new System.Threading.Timer(async _ =>
+        {
             await InvokeAsync(UpdateSummary);
         }, null, 300, System.Threading.Timeout.Infinite);
     }
@@ -592,15 +613,21 @@ I look forward to working with you to accomplish our goals on this project.
 
     private async Task LoadFiles()
     {
-        try {
+
+        try
+        {
             var response = await Http.PostAsJsonAsync($"/{DataObjects.Endpoints.EndpointFileGpt.GetFiles}", new { Path = DirectoryPath });
-            if(response.IsSuccessStatusCode) {
+            if (response.IsSuccessStatusCode)
+            {
                 fileItems = await response.Content.ReadFromJsonAsync<List<FileItem>>() ?? new();
                 await UpdateSummary();
             }
-        } catch(Exception ex) {
-            // Optionally log error.
         }
+        catch (Exception ex)
+        {
+            // Log error if needed.
+        }
+       
     }
 
     private async Task GetSelectedFileContents()
@@ -610,10 +637,14 @@ I look forward to working with you to accomplish our goals on this project.
 
         var summary = new System.Text.StringBuilder();
         summary.AppendLine("=== Selected Files ===");
-        if(!selectedFiles.Any()) {
+        if (!selectedFiles.Any())
+        {
             summary.AppendLine("No files selected.");
-        } else {
-            foreach(var file in selectedFiles) {
+        }
+        else
+        {
+            foreach (var file in selectedFiles)
+            {
                 summary.AppendLine($"- {file.FullPath}");
             }
             summary.AppendLine();
@@ -628,39 +659,56 @@ I look forward to working with you to accomplish our goals on this project.
         fileSizeIndicators.Clear();
 
         // Retrieve metadata for unselected files.
-        if(unselectedFiles.Any()) {
-            try {
-                var metaResponseUnselected = await Http.PostAsJsonAsync($"/{DataObjects.Endpoints.EndpointFileGpt.GetFileMetadata}", new { FilePaths = unselectedFiles });
-                if(metaResponseUnselected.IsSuccessStatusCode) {
-                    var metaItemsUnselected = await metaResponseUnselected.Content.ReadFromJsonAsync<List<FileMetadataItem>>();
-                    if(metaItemsUnselected != null) {
-                        foreach(var meta in metaItemsUnselected) {
-                            var file = FilteredFiles.FirstOrDefault(f => f.FullPath == meta.FullPath);
-                            if(file != null) {
-                                file.LineCount = meta.LineCount;
-                                file.CharCount = meta.CharCount;
+        if (unselectedFiles.Any())
+        {
+            
+                try
+                {
+                    var metaResponseUnselected = await Http.PostAsJsonAsync($"/{DataObjects.Endpoints.EndpointFileGpt.GetFileMetadata}", new { FilePaths = unselectedFiles });
+                    if (metaResponseUnselected.IsSuccessStatusCode)
+                    {
+                        var metaItemsUnselected = await metaResponseUnselected.Content.ReadFromJsonAsync<List<FileMetadataItem>>();
+                        if (metaItemsUnselected != null)
+                        {
+                            foreach (var meta in metaItemsUnselected)
+                            {
+                                var file = FilteredFiles.FirstOrDefault(f => f.FullPath == meta.FullPath);
+                                if (file != null)
+                                {
+                                    file.LineCount = meta.LineCount;
+                                    file.CharCount = meta.CharCount;
+                                }
+                                fileSizeIndicators[meta.FullPath] = $"{meta.LineCount}L/{meta.CharCount}C";
                             }
-                            fileSizeIndicators[meta.FullPath] = $"{meta.LineCount}L/{meta.CharCount}C";
                         }
                     }
                 }
-            } catch(Exception ex) {
-                // Optionally log error.
-            }
+                catch (Exception ex)
+                {
+                    // Optionally log error.
+                }
+            
         }
 
         // Retrieve full contents for selected files.
-        if(selectedFiles.Any()) {
-            try {
+        if (selectedFiles.Any())
+        {
+  
+            try
+            {
                 var contentResponse = await Http.PostAsJsonAsync($"/{DataObjects.Endpoints.EndpointFileGpt.GetFileContents}", new { FilePaths = selectedFiles.Select(f => f.FullPath).ToList() });
-                if(contentResponse.IsSuccessStatusCode) {
+                if (contentResponse.IsSuccessStatusCode)
+                {
                     var fileContents = await contentResponse.Content.ReadFromJsonAsync<List<FileContentItem>>();
-                    if(fileContents != null) {
-                        foreach(var file in fileContents) {
+                    if (fileContents != null)
+                    {
+                        foreach (var file in fileContents)
+                        {
                             int lineCount = file.Content.Split('\n').Length;
                             int charCount = file.Content.Length;
                             var item = selectedFiles.FirstOrDefault(f => f.FullPath == file.FullPath);
-                            if(item != null) {
+                            if (item != null)
+                            {
                                 item.LineCount = lineCount;
                                 item.CharCount = charCount;
                             }
@@ -672,21 +720,28 @@ I look forward to working with you to accomplish our goals on this project.
                             summary.AppendLine();
                         }
                     }
-                } else {
+                }
+                else
+                {
                     summary.AppendLine("Error retrieving file contents.");
                 }
-            } catch(Exception ex) {
+            }
+            catch (Exception ex)
+            {
                 summary.AppendLine("Error retrieving file contents: " + ex.Message);
             }
+           
         }
 
         summary.AppendLine(textAfter);
-        if(!string.IsNullOrWhiteSpace(AdditionalRequest)) {
+        if (!string.IsNullOrWhiteSpace(AdditionalRequest))
+        {
             summary.AppendLine();
             summary.AppendLine("=== Bottom Modification Instructions ===");
             summary.AppendLine(AdditionalRequest);
         }
-        if(!string.IsNullOrWhiteSpace(additionalSummary)) {
+        if (!string.IsNullOrWhiteSpace(additionalSummary))
+        {
             summary.AppendLine();
             summary.AppendLine("=== Common Modification Phrases ===");
             summary.AppendLine(additionalSummary);
@@ -715,16 +770,20 @@ I look forward to working with you to accomplish our goals on this project.
         int modelLimit = ChatGptModels.ContainsKey(SelectedChatGptModel) ? ChatGptModels[SelectedChatGptModel] : 7000;
         var lines = summary.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None).ToList();
         int totalLines = lines.Count;
-        if(totalLines <= modelLimit) {
+        if (totalLines <= modelLimit)
+        {
             return new List<string> { summary };
         }
 
         List<List<string>> blocks = new();
         List<string> currentBlock = new();
         bool firstBlock = true;
-        foreach(var line in lines) {
-            if(line.StartsWith("----- ")) {
-                if(!firstBlock && currentBlock.Any()) {
+        foreach (var line in lines)
+        {
+            if (line.StartsWith("----- "))
+            {
+                if (!firstBlock && currentBlock.Any())
+                {
                     blocks.Add(currentBlock);
                     currentBlock = new();
                 }
@@ -732,7 +791,8 @@ I look forward to working with you to accomplish our goals on this project.
             }
             currentBlock.Add(line);
         }
-        if(currentBlock.Any()) {
+        if (currentBlock.Any())
+        {
             blocks.Add(currentBlock);
         }
 
@@ -742,8 +802,10 @@ I look forward to working with you to accomplish our goals on this project.
         List<List<string>> chunks = new();
         List<string> currentChunk = new();
         int currentChunkLineCount = 0;
-        foreach(var block in blocks) {
-            if(currentChunkLineCount + block.Count > idealChunkSize && currentChunk.Any()) {
+        foreach (var block in blocks)
+        {
+            if (currentChunkLineCount + block.Count > idealChunkSize && currentChunk.Any())
+            {
                 chunks.Add(currentChunk);
                 currentChunk = new();
                 currentChunkLineCount = 0;
@@ -751,12 +813,14 @@ I look forward to working with you to accomplish our goals on this project.
             currentChunk.AddRange(block);
             currentChunkLineCount += block.Count;
         }
-        if(currentChunk.Any()) {
+        if (currentChunk.Any())
+        {
             chunks.Add(currentChunk);
         }
 
         List<string> finalChunks = new();
-        for(int i = 0; i < chunks.Count; i++) {
+        for (int i = 0; i < chunks.Count; i++)
+        {
             string header = $"=== Chunk {i + 1} of {chunks.Count} ===\nPlease wait until all chunks are received before responding.\n";
             string chunkText = string.Join("\n", chunks[i]);
             finalChunks.Add(header + "\n" + chunkText);
@@ -784,7 +848,7 @@ I look forward to working with you to accomplish our goals on this project.
     #region File Selection & Filtering
     private void SelectAllVisible()
     {
-        foreach(var item in FilteredFiles) {
+        foreach (var item in FilteredFiles){
             item.IsSelected = true;
         }
         UpdateSummaryDebounced();
@@ -793,7 +857,7 @@ I look forward to working with you to accomplish our goals on this project.
 
     private void DeselectAllVisible()
     {
-        foreach(var item in FilteredFiles) {
+        foreach (var item in FilteredFiles){
             item.IsSelected = false;
         }
         UpdateSummaryDebounced();
@@ -802,7 +866,7 @@ I look forward to working with you to accomplish our goals on this project.
 
     private void ClearAllSelections()
     {
-        foreach(var item in fileItems) {
+        foreach (var item in fileItems){
             item.IsSelected = false;
         }
         UpdateSummaryDebounced();
@@ -821,7 +885,8 @@ I look forward to working with you to accomplish our goals on this project.
         List<string> stringList = ["Readme.md", "Program.cs", "App.razor", "MainLayout.razor", "\\DataAccess.cs", "\\DataObjects.cs", "Controllers\\DataController.cs", "\\DataModel.cs", "\\EFDataModel.cs"];
         var listCopy = fileItems.ToList();
         // now we need to select any file that matches the name
-        foreach(FileItem item in listCopy) {
+        foreach (FileItem item in listCopy)
+        {
             if(stringList.Any(o => (string.Empty + item.FullPath).Trim().ToLower().EndsWith(((string.Empty + o).ToLower().Trim())))) {
                 item.IsSelected = true;
             }
@@ -832,32 +897,41 @@ I look forward to working with you to accomplish our goals on this project.
     }
 
     // FilteredFiles based on fileItems
-    private IEnumerable<FileItem> FilteredFiles {
-        get {
-            if(fileItems == null)
+    private IEnumerable<FileItem> FilteredFiles
+    {
+        get
+        {
+            if (fileItems == null)
                 return Enumerable.Empty<FileItem>();
             IEnumerable<FileItem> filtered = fileItems;
-            if(selectedFileTypes.Any()) {
-                filtered = filtered.Where(item => {
+            if (selectedFileTypes.Any())
+            {
+                filtered = filtered.Where(item =>
+                {
                     string ext = System.IO.Path.GetExtension(item.FullPath).ToLower();
                     return selectedFileTypes.Contains(ext);
                 });
             }
-            if(!string.IsNullOrWhiteSpace(filterText))
+            if (!string.IsNullOrWhiteSpace(filterText))
                 filtered = filtered.Where(item => IsWildcardMatch(item.FullPath, filterText));
-            if(!string.IsNullOrWhiteSpace(plainTextFilter))
+            if (!string.IsNullOrWhiteSpace(plainTextFilter))
                 filtered = filtered.Where(item => item.FullPath.IndexOf(plainTextFilter, StringComparison.OrdinalIgnoreCase) >= 0);
             filtered = filtered.Where(item => !ignoredFolders.Any(ignored => item.FullPath.IndexOf(ignored, StringComparison.OrdinalIgnoreCase) >= 0));
 
-            if(SortOption == "LineCount") {
+            if (SortOption == "LineCount")
+            {
                 filtered = SortDirection == "asc" ?
                            filtered.OrderBy(item => item.LineCount ?? int.MaxValue) :
                            filtered.OrderByDescending(item => item.LineCount ?? int.MaxValue);
-            } else if(SortOption == "CharCount") {
+            }
+            else if (SortOption == "CharCount")
+            {
                 filtered = SortDirection == "asc" ?
                            filtered.OrderBy(item => item.CharCount ?? int.MaxValue) :
                            filtered.OrderByDescending(item => item.CharCount ?? int.MaxValue);
-            } else {
+            }
+            else
+            {
                 filtered = SortDirection == "asc" ?
                            filtered.OrderBy(item => item.FileName) :
                            filtered.OrderByDescending(item => item.FileName);
@@ -880,12 +954,14 @@ I look forward to working with you to accomplish our goals on this project.
     #region Lifecycle & Initialization
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if(firstRender) {
-            // Model.TenantCodeFromUrl is already set by the parent index page.
+        if (firstRender)
+        {
+            Model.TenantCodeFromUrl = TenantCode;
+
             await LoadFiles();
+            
             await UpdateSummary();
         }
     }
     #endregion
 }
-

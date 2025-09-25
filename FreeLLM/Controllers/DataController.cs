@@ -1,6 +1,8 @@
 using FreeLLM.Server.Hubs;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Caching.Memory;
+using System.Runtime.Caching;
 using System.Security.Claims;
 
 namespace FreeLLM.Server.Controllers;
@@ -13,6 +15,7 @@ public partial class DataController : ControllerBase
     private IDataAccess da;
     private DataObjects.User CurrentUser;
     private Guid TenantId = Guid.Empty;
+    private readonly IMemoryCache _cache;
     private IConfigurationHelper configurationHelper;
     private Plugins.IPlugins plugins;
 
@@ -25,7 +28,8 @@ public partial class DataController : ControllerBase
         IHttpContextAccessor httpContextAccessor, 
         ICustomAuthentication auth, 
         IHubContext<freellmHub> hubContext, 
-        IConfigurationHelper configHelper, 
+        IConfigurationHelper configHelper,
+        IMemoryCache memoryCache,
         Plugins.IPlugins diPlugins)
     {
         da = daInjection;
@@ -33,6 +37,8 @@ public partial class DataController : ControllerBase
         configurationHelper = configHelper;
         plugins = diPlugins;
         _signalR = hubContext;
+
+        _cache = memoryCache;
 
         if (authenticationProviders != null) {
             da.SetAuthenticationProviders(new DataObjects.AuthenticationProviders { 
