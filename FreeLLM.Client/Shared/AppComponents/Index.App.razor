@@ -502,12 +502,13 @@ I look forward to working with you to accomplish our goals on this project.
 
     #region ChatGPT Model & Sorting Options
     private Dictionary<string, int> ChatGptModels = new Dictionary<string, int>
-        {
+    {
+        { "infinite", 0 },   // 0 = no chunking
         { "long", 10000 },
         { "medium", 8000 },
         { "short", 3000 },
     };
-    private string _selectedChatGptModel = "long";
+    private string _selectedChatGptModel = "infinite";
     private string SelectedChatGptModel {
         get => _selectedChatGptModel;
         set {
@@ -543,31 +544,35 @@ I look forward to working with you to accomplish our goals on this project.
     #region Summary & Count Color Helpers
     private string GetPreviewBackgroundColor()
     {
-        int limit = ChatGptModels.ContainsKey(SelectedChatGptModel) ? ChatGptModels[SelectedChatGptModel] : 7000;
+        int limit = 7000;
         double ratio = overallLineCount / (double)limit;
+
         if(ratio < 0.5)
-            return "lightgreen";
+            return "var(--bs-success-bg-subtle)";   // good
         else if(ratio < 0.7)
-            return "lightyellow";
+            return "var(--bs-info-bg-subtle)";      // info
         else if(ratio < 0.9)
-            return "lightsalmon";
+            return "var(--bs-warning-bg-subtle)";   // warn
         else
-            return "lightcoral";
+            return "var(--bs-danger-bg-subtle)";    // error
     }
+
     private string GetFileBadgeColor(FileItem file)
     {
-        int limit = ChatGptModels.ContainsKey(SelectedChatGptModel) ? ChatGptModels[SelectedChatGptModel] : 7000;
-        double ratio = (file.LineCount ?? 0) / (double)limit;
-        if(ratio < 0.5)
-            return "lightgreen";
-        else if(ratio < 0.7)
-            return "lightyellow";
-        else if(ratio < 0.9)
-            return "lightsalmon";
+        // hardcoded thresholds preserved
+        double lineCount = (file.LineCount ?? 0);
+
+        if(lineCount < 1000)
+            return "var(--bs-success-bg-subtle)";   // good
+        else if(lineCount < 2000)
+            return "var(--bs-info-bg-subtle)";      // info
+        else if(lineCount < 3000)
+            return "var(--bs-warning-bg-subtle)";   // warn
         else
-            return "lightcoral";
+            return "var(--bs-danger-bg-subtle)";    // error
     }
     #endregion
+
 
     #region Update & Load Methods
     private System.Threading.Timer? debounceTimer;
@@ -713,6 +718,10 @@ I look forward to working with you to accomplish our goals on this project.
     private List<string> SplitSummaryIntoChunks(string summary)
     {
         int modelLimit = ChatGptModels.ContainsKey(SelectedChatGptModel) ? ChatGptModels[SelectedChatGptModel] : 7000;
+        if(modelLimit == 0) {
+            // infinite => do not split at all
+            return new List<string> { summary };
+        }
         var lines = summary.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None).ToList();
         int totalLines = lines.Count;
         if(totalLines <= modelLimit) {
