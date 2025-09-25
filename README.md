@@ -227,7 +227,7 @@ PRs and issues welcome! Keep changes modular by using the provided `*.App.*` ext
 
 ## License
 
-Add a license file (e.g., MIT/Apache-2.0) to clarify usage. Until then, treat this as “all rights reserved” for redistribution purposes.
+MIT License see LISCENSE file for details. 
 
 ---
 
