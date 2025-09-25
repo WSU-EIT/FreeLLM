@@ -6,6 +6,18 @@
     <ImplicitUsings>enable</ImplicitUsings>
 	<SatelliteResourceLanguages>en</SatelliteResourceLanguages>
 	<UserSecretsId>ffba3dfe-46f7-436d-8b09-e77396f7920b</UserSecretsId>
+	<SignAssembly>False</SignAssembly>
+	<!-- Single-file, self-contained Windows EXE -->
+	<PublishSingleFile>true</PublishSingleFile>
+	<SelfContained>true</SelfContained>
+	<RuntimeIdentifier>win-x64</RuntimeIdentifier>
+
+	<!-- Web apps serve lots of static content; allow extraction at runtime while still shipping 1 EXE -->
+	<IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+	<IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+
+	<!-- Don’t trim: ASP.NET/EF/SignalR use reflection -->
+	<PublishTrimmed>false</PublishTrimmed>
   </PropertyGroup>
 
   <ItemGroup>

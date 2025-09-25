@@ -6,14 +6,8 @@
 #
 # Key Conventions:
 # - All "inputs" live in top-level `env` so they're easy to find/change.
-# - Artifact names are based on PROJECT_NAME + configuration (e.g., CRM-Release).
+# - Artifact names are based on PROJECT_NAME + configuration (e.g., FreeLLM-Release).
 # - Repo snapshot is zipped and uploaded once per run (Debug leg) for traceability.
-#
-# Notes:
-# - GitHub Actions doesn't have Azure DevOps-style "parameters" for pipelines.
-#   We emulate that with top-level `env` variables and the build matrix.
-# - To make this reusable with typed inputs, consider a separate reusable
-#   workflow (`on: workflow_call:`) or add `workflow_dispatch` inputs.
 # ============================================================================
 
 name: Build and Publish
@@ -30,6 +24,9 @@ env:
 
   # Toolchain
   DOTNET_VERSION: 9.0.x
+
+  # Target
+  RUNTIME_IDENTIFIER: win-x64
 
 # Use PowerShell consistently on Windows steps without repeating `shell: pwsh`
 defaults:
@@ -57,7 +54,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # full history can help versioning or source link
+          fetch-depth: 0
 
       # ----- Snapshot repo before restore/build/publish (for traceability) ---
       - name: Create repository snapshot (pre-build)
@@ -66,7 +63,6 @@ jobs:
           Compress-Archive -Path "$env:GITHUB_WORKSPACE\*" -DestinationPath $zip -Force
           "REPO_ZIP=$zip" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-      # Upload snapshot only once per run (on Debug leg) to avoid duplicates
       - name: Upload repository snapshot (once)
         if: ${{ matrix.configuration == 'Debug' }}
         uses: actions/upload-artifact@v4
@@ -96,13 +92,20 @@ jobs:
           dotnet publish "${{ env.PROJECT_FILE }}" `
             --configuration "${{ matrix.configuration }}" `
             --no-build `
+            -r ${{ env.RUNTIME_IDENTIFIER }} `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:PublishTrimmed=false `
+            -p:IncludeAllContentForSelfExtract=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:DebugType=None `
+            -p:DebugSymbols=false `
             --output $out
 
       # ------------------------- Upload Artifacts ----------------------------
-      # Artifact name is based on project + configuration (e.g., CRM-Debug)
       - name: Upload published artifact (${{ matrix.configuration }})
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.PROJECT_NAME }}-${{ matrix.configuration }}
+          name: ${{ env.PROJECT_NAME }}-${{ matrix.configuration }}-${{ env.RUNTIME_IDENTIFIER }}
           path: ./${{ env.ARTIFACT_DIR }}/${{ matrix.configuration }}
           if-no-files-found: error

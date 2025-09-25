@@ -13,6 +13,8 @@ public partial class Program
     public static WebApplicationBuilder AppModifyBuilderStart(WebApplicationBuilder builder)
     {
         var output = builder;
+        // always run on 55000
+        builder.WebHost.UseUrls("http://127.0.0.1:55000");
         // Add any app-specific modifications to the builder here.
         return output;
     }
