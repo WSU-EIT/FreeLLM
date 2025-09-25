@@ -1,251 +1,330 @@
-﻿# FreeLLM — Open-source CRM/tenant framework (Blazor + EF Core)
+﻿# FreeLLM — Prepare Code Context for AI (LLMs) the Right Way
 
-FreeLLM is a multi-tenant CRM-style web app and framework you can run as-is or extend to build your own line-of-business application. It’s built with **ASP.NET Core/Blazor**, **Entity Framework Core**, and **SignalR**, with a modular UI and a small set of helper APIs to accelerate common admin/developer workflows.
+FreeLLM is a lightweight Blazor app that helps engineers assemble the *right* source files and *clear* intent before handing work to AI (large language models, “LLMs”). Instead of copy-pasting random snippets into a chat window, FreeLLM guides you to select files, add instructions, and export a clean, chunked prompt that consistently produces better AI results.
 
----
-
-## Highlights
-
-* **Blazor Web App UI**
-  Clean, componentized UI with Bootstrap/MudBlazor/Radzen; supports light/dark/auto themes, custom fonts/CSS, and per-tenant theming.
-
-* **Multi-tenant core**
-  Tenants, users, groups, departments, and UDF labels are first-class. URLs can optionally include tenant codes.
-
-* **Auth choices**
-  Pluggable auth providers (Google/Microsoft/Apple/Facebook/OpenID) plus optional custom provider and local login. Per-tenant login options & rules.
-
-* **File Explorer (Dev tool)**
-  A built-in “project file explorer” on the home page lets App Admins list, filter, and fetch file contents/metadata from a server path (handy for code-review/update workflows). Backed by secured APIs with in-memory caching.
-
-* **Real-time updates**
-  SignalR hub broadcasts tenant/user/language/settings changes so connected clients stay in sync (e.g., “users on same page” detection, toasts, maintenance state).
-
-* **Config & Setup flow**
-  First-run/startup checks for database/connection string; includes a `/Setup` path and a `DatabaseOffline` UX. Maintenance Mode supported.
-
-* **Extensibility**
-  A plugin cache model is present for future add-ins. “App.*.razor” partials/regions are provided throughout to add app-specific code without forking core files.
+> **Target stack:** C# / **.NET 9** / Blazor, designed to integrate with the **FreeCRM** framework: github.com/WSU-EIT/FreeCRM
 
 ---
 
-## Major projects & folders (high level)
+## Why this exists
+
+* **AI outcomes depend on input quality.** Inconsistent copy/paste leads to missing context, token overflows, and weak answers.
+* **Engineers waste time curating context.** Manual file gathering and prompt scaffolding is repetitive and error-prone.
+* **Leaders need repeatability.** Teams should ask AI in a consistent, auditable way that scales across repos.
+
+**FreeLLM standardizes the “prep” step** so your AI receives complete, right-sized context and clear objectives—every time.
+
+---
+
+## What it does (the Index page workflow)
+
+> The **Index page** is the product. Everything else in this repo is supporting auth/infra.
+
+1. **Point to a directory**
+   Enter a local repo path. The app lists files while excluding noise (bin/obj/hidden).
+
+2. **Curate the context**
+
+   * Filter by extension (`.cs`, `.razor`, `.md`, custom types), wildcard (`*.cs`, `*/Views/*`), and plain-text match.
+   * Ignore specific folders (e.g., `bootstrap`, `fontawesome`).
+   * Sort by **name**, **line count**, or **character count**.
+   * Select files for *full content*; leave others to contribute *metadata* only.
+
+3. **Write intent once, reuse often**
+
+   * Add top “Modification Instructions.”
+   * Toggle common phrases/presets for consistent asks.
+   * Optional bottom instructions (team or project-specific).
+
+4. **Right-size for AI**
+
+   * The app computes line/character counts and badges file sizes.
+   * It auto-splits the final package into balanced **chunks** to respect LLM context limits.
+
+5. **Export in one click**
+
+   * Copy a clean, structured “Project Update” that includes:
+
+     * Selected file contents
+     * Unselected file metadata (so AI understands scope without flooding tokens)
+     * Your instructions (top, bottom, and common phrases)
+     * Chunk headers (if split)
+
+---
+
+## How it works (supporting APIs)
+
+The Index page calls three secured endpoints (AppAdmin policy):
+
+* **GetFiles** — enumerate files under a path, excluding `bin/obj` and hidden folders.
+
+  * **Route:** `POST ~/{DataObjects.Endpoints.EndpointFileGpt.GetFiles}`
+  * **Body:**
+
+    ```json
+    { "Path": "C:\\path\\to\\repo" }
+    ```
+  * **Response (sample):**
+
+    ```json
+    [
+      { "FileName": "Program.cs", "FullPath": "C:\\repo\\Program.cs" },
+      { "FileName": "App.razor",  "FullPath": "C:\\repo\\App.razor"  }
+    ]
+    ```
+
+* **GetFileMetadata** — line/char counts for a list of files (used for *unselected* files).
+
+  * **Route:** `POST ~/{DataObjects.Endpoints.EndpointFileGpt.GetFileMetadata}`
+  * **Body:**
+
+    ```json
+    { "FilePaths": ["C:\\repo\\Program.cs", "C:\\repo\\App.razor"] }
+    ```
+
+* **GetFileContents** — full contents for a list of files (used for *selected* files).
+
+  * **Route:** `POST ~/{DataObjects.Endpoints.EndpointFileGpt.GetFileContents}`
+  * **Body:**
+
+    ```json
+    { "FilePaths": ["C:\\repo\\Program.cs"] }
+    ```
+
+**Implementation:** `FreeLLM/Controllers/DataController.App.FreeLLM.cs`
+**Notes:** cached briefly (`IMemoryCache`), AppAdmin-gated, used exclusively by the Index page.
+
+---
+
+## Where things live (selected files)
 
 ```
-FreeLLM/                      # Server + core shared pieces (controllers, DI, helpers)
-  Components/                 # Root App.razor + modules & HTML/JS helpers
-  Controllers/                # API endpoints (incl. FileGpt endpoints)
-  Classes/                    # Configuration helper (partial)
-  ...                         #
-
-FreeLLM.Client/               # Blazor client-side components
-  Layout/MainLayout.razor     # Shell: navigation, SignalR wiring, toasts, theme, timers
-  Shared/AppComponents/       # App-specific component extension points (Edit*, Settings, About, Index.App)
-    Index.App.razor           # File Explorer + “chunked” summary builder UI
-
-FreeLLM.DataObjects/          # Shared DTOs/models & enums (tenants, users, mail, settings, filters...)
-  DataObjects.cs              # Central types (SensitiveAttribute, TenantSettings, etc.)
-  GlobalSettings.App.cs       # App-specific global settings (partial)
-
-FreeLLM.EFModels/             # EF Core DbContext and entity maps
-  EFModels/EFDataModel.cs     # DbSets, indexes, relationship config
+FreeLLM/
+├─ FreeLLM.Client/
+│  ├─ Shared/AppComponents/
+│  │  ├─ Index.App.razor            <-- Main UI (this is the product)
+│  │  ├─ Settings.App.razor         (optional app settings UI stubs)
+│  │  └─ About.App.razor            (about page content)
+│  └─ Layout/MainLayout.razor       (SignalR, theme, auth bootstrapping)
+│
+├─ FreeLLM/
+│  ├─ Components/App.razor          (shell: assets, scripts, head/body)
+│  ├─ Controllers/
+│  │  ├─ DataController.cs          (base controller/auth plumbing)
+│  │  ├─ DataController.App.FreeLLM.cs  <-- FileGpt endpoints
+│  │  └─ DataController.App.cs      (pattern for custom endpoints)
+│  ├─ Classes/ConfigurationHelper.App.cs (app config customization points)
+│  └─ ... (auth, SignalR hub, policies)
+│
+├─ FreeLLM.DataObjects/
+│  └─ DataObjects.cs                (DTOs, enums, settings, responses)
+│
+└─ FreeLLM.EFModels/
+   └─ EFModels/EFDataModel.cs       (EF entities & model mapping)
 ```
 
 ---
 
-## Data model (selected types)
+## Customization guide
 
-* **Tenants**: `Tenant`, `TenantSettings` (theme, login options, work schedule, file types, delete policy, etc.)
-* **Users & groups**: `User`, `UserGroup`, `UserInGroup`, with admin/app-admin flags, photo, login metadata
-* **Departments**: `Department`, `DepartmentGroup`
-* **File storage**: `FileStorage` metadata (binary payload optional, soft delete supported)
-* **Localization**: `Language` + `OptionPair` phrase store
-* **Settings**: Key/value settings with `SettingType`
-* **Security annotations**: `SensitiveAttribute` (mark fields like LDAP/JWT private keys as sensitive in UI/logging)
+### 1) “Check Defaults” selection (what gets pre-selected)
 
-EF Core entities and relationships (indexes, FK constraints) are set up in `EFDataModel.cs`. Providers are configurable (SQLite/MySQL/PostgreSQL/SQL Server).
+**Why customize:**
+Speed up onboarding for a given repo/framework by auto-selecting the “must-have” context files (entry points, startup, DI wiring, data models, etc.). This reduces misses and creates consistent AI prompts across teams.
 
----
+**Where:** `FreeLLM.Client/Shared/AppComponents/Index.App.razor`
+**Method:** `CheckDefaults()`
 
-## Notable features & flows
+```csharp
+private async Task CheckDefaults()
+{
+    List<string> stringList = [
+        "Readme.md", "Program.cs", "App.razor", "MainLayout.razor",
+        "\\DataAccess.cs", "\\DataObjects.cs", "Controllers\\DataController.cs",
+        "\\DataModel.cs", "\\EFDataModel.cs"
+    ];
 
-### Startup & health
+    var listCopy = fileItems.ToList();
 
-* The client calls `api/Data/GetStartupState` and may redirect to **/Setup** (missing connection string) or **/DatabaseOffline**.
-* A 10s “check for updates” timer reloads the app if version/release changes, and reduces interval if the server goes offline.
+    foreach (FileItem item in listCopy)
+    {
+        if (stringList.Any(o =>
+            (string.Empty + item.FullPath).Trim().ToLower()
+            .EndsWith(((string.Empty + o).ToLower().Trim()))))
+        {
+            item.IsSelected = true;
+        }
+    }
 
-### Maintenance Mode
-
-* Toggle via `ApplicationSettingsUpdate`. Non-admins see a maintenance message; App Admins can still access and will see a red banner.
-
-### Real-time (SignalR)
-
-* Hub: `freellmHub` (client joins by TenantId).
-* Broadcasts `SignalRUpdate` events for many types (User, Tenant, Language, Settings, etc.).
-* “Users on same page” and other small UX niceties are supported in `MainLayout.razor`.
-
-### File Explorer & GPT helper (Index.App)
-
-* Client UI to:
-
-  * Configure directory, file filters/types, ignored folders
-  * Select files; fetch **metadata** for unselected and **contents** for selected
-  * Generate “instructions + file content” **chunks** for pasting to an LLM
-* Server endpoints (AppAdmin policy):
-
-  * `GetFiles` — recursive file list (skips `bin/obj` and hidden folders)
-  * `GetFileMetadata` — line/char counts (cached)
-  * `GetFileContents` — full text (cached)
-* Basic caching with `IMemoryCache` (5 minutes per file key).
-
----
-
-## Authentication & authorization
-
-* **Providers** toggled in `DataController` based on `ICustomAuthentication` (Google/Microsoft/Apple/Facebook/OpenID).
-* Cookie/token + optional **device fingerprint** via ThumbmarkJS.
-* Requests honor `TenantId`, `Token`, and `Fingerprint` headers/query.
-* Example **policy**: `Policies.AppAdmin` protects developer-oriented endpoints.
-
----
-
-## Theming & UX
-
-* Light/dark/auto theme, persisted in local storage; syncs Monaco editor theme when present.
-* Per-tenant theme/font CSS and custom imports supported.
-* Bootstrap Icons, Font Awesome, MudBlazor, Radzen components available.
-* Toast message queue with auto-hide and max persistent count per tenant settings.
-
----
-
-## Running locally
-
-### Prereqs
-
-* .NET SDK (8+ recommended)
-* A database (choose one):
-
-  * SQLite (easiest for development)
-  * MySQL / PostgreSQL / SQL Server
-
-### 1) Configure the connection string
-
-Choose one approach:
-
-* **Code config** (for quick dev): in `EFDataModel.cs` there are commented provider samples; typically you configure via `appsettings.json` or environment variables wired into your DI.
-* **Setup flow**: run the app and navigate to `/Setup` to provide a connection string.
-
-Supported providers (from `DataObjects.ConnectionStringConfig`):
-
-* SQLite (`SQLiteDatabase`)
-* SQL Server (`SqlServer_*`)
-* PostgreSQL (`PostgreSql_*`)
-* MySQL (`MySQL_*`)
-
-### 2) Database migrations
-
-Create/apply your EF Core migrations for your chosen provider. (The project includes entity maps; generate migrations in your local solution and update the DB.)
-
-```bash
-# Example (adjust project names/paths/provider):
-dotnet ef migrations add InitialCreate -p FreeLLM.EFModels -s FreeLLM
-dotnet ef database update -p FreeLLM.EFModels -s FreeLLM
+    fileItems = listCopy.ToList();
+    await UpdateSummary();
+    StateHasChanged();
+}
 ```
 
-### 3) Build & run
+**How to extend for your repo:**
 
-```bash
-dotnet restore
-dotnet build
-dotnet run --project FreeLLM
+* Add common core files for **.NET 9 + FreeCRM** (e.g., `Startup.cs` if present, `FreeLLM.*.cs`, domain service registrations, `appsettings.json`, module folders).
+* Include conventional paths used in your org (e.g., `\Web\` or `\Services\`).
+* Keep patterns short and stable (suffix‐based `EndsWith`) so they continue to match across machines.
+
+**FreeCRM-aligned suggestions to add:**
+
+```csharp
+"Controllers\\DataController.App.FreeLLM.cs",
+"FreeLLM.Client\\Shared\\AppComponents\\Index.App.razor",
+"FreeLLM\\Components\\App.razor",
+"FreeLLM.DataObjects\\DataObjects.cs",
+"FreeLLM.EFModels\\EFModels\\EFDataModel.cs"
 ```
 
-Open the printed URL (typically `https://localhost:****/`).
-On first run you may be redirected to `/Setup` if the DB isn’t configured.
+---
+
+### 2) Default filters (file types, ignored folders, preselected types)
+
+**Why customize:**
+Different stacks need different defaults. For .NET 9 + Blazor you might bias toward `.cs`, `.razor`, `.md`; for full-stack scenarios you might pull in `.js`, `.css`, `.ts`, etc. Ignored folders keep the UI clean and prevent accidental token blow-ups.
+
+**Where:** `FreeLLM.Client/Shared/AppComponents/Index.App.razor`
+**Fields to adjust:**
+
+```csharp
+// Default list shown in the “File Type Filters” UI
+private List<string> fileTypes = new()
+{ ".cs", ".razor", ".cshtml", ".md", ".js", ".css", ".ts", ".json", ".html", ".xml", ".scss" };
+
+// Types that start CHECKED
+private HashSet<string> selectedFileTypes = new()
+{ ".cs", ".razor", ".cshtml", ".md" };
+
+// Folders hidden from the list by default
+private List<string> ignoredFolders = new() { "fontawesome", "bootstrap" };
+
+// Optional: a wildcard filter textbox exists; set an initial value if desired
+private string filterText { get; set; } = ""; // e.g., "*.cs;*.razor" (if you add support for semicolon lists)
+```
+
+**Recommendations (FreeCRM / Blazor):**
+
+* **Keep** `.cs`, `.razor`, `.md` preselected.
+* **Consider adding** `.json` (e.g., `appsettings.json`), `.csproj` (project references), `.svg` if your component library relies on them.
+* **Extend ignores** with `node_modules`, `dist`, `wwwroot/lib`, `obj`, `bin`, `coverage`, `artifacts`.
+* If you want `.cshtml` off by default for pure Blazor repos, remove it from `selectedFileTypes`.
 
 ---
 
-## Configuration knobs (selected)
+### 3) Sorting defaults and badges
 
-* **Base path** & **Analytics** (`ConfigurationHelper` partial)
+**Why customize:**
+For larger repos, **LineCount** or **CharCount** default sorting surfaces “heavy” files first, helping authors prune or chunk earlier.
 
-  * `BasePath` for `<base href>` if hosting under a sub-path
-  * `AnalyticsCode` (supports a simple “G-XXXX” GA code or a full `<script>` block)
-* **App settings** (`ApplicationSettingsUpdate`)
+**Where:** `Index.App.razor`
 
-  * `MaintenanceMode`
-  * `UseTenantCodeInUrl`, `ShowTenantListingWhenMissingTenantCode`
-  * `ApplicationURL`
-* **Tenant settings** (`TenantSettings`)
+```csharp
+// Defaults
+private string _sortOption = "Name";   // "Name" | "LineCount" | "CharCount"
+private string _sortDirection = "asc"; // "asc" | "desc"
+```
 
-  * Theme: `Theme`, `ThemeCss`, `ThemeFont`, `ThemeFontCssImport`
-  * Login rules: `AllowUsersToSignUpForLocalLogin`, `RequirePreExistingAccountToLogIn`, etc.
-  * Delete behavior: `DeletePreference` (Immediate/MarkAsDeleted) + purge days
-  * Work schedule & allowed file types
-  * Sensitive fields (LDAP/JWT keys) are marked with `[Sensitive]`
+**Badges (size coloring):**
 
----
-
-## Security notes
-
-* Many fields are annotated with `SensitiveAttribute` to help ensure they’re never casually exposed in logs or UI.
-* Developer file APIs are protected by an App Admin policy and exclude hidden/bin/obj directories.
-* Device fingerprint (ThumbmarkJS) is captured and tied to tokens to reduce token theft risk.
+```csharp
+// Thresholds used to color badge backgrounds by line count
+// Adjust to your prompt/token budget or LLM model limits
+if (lineCount < 1000)  success;
+else if (lineCount < 2000) info;
+else if (lineCount < 3000) warning;
+else danger;
+```
 
 ---
 
-## Customization points
+### 4) Chunking behavior
 
-* **`*.App.*` partials**: sprinkle across server/controllers/components so you can add/override behavior without modifying core files.
-* **`Modules.App.razor`**: inject per-app `<head>`/`<body>` fragments and JavaScript hooks.
-* **Client components** in `Shared/AppComponents/*` provide slots to extend edit forms (Tenant/User/Department/Settings) and About page.
+**Why customize:**
+Different LLMs / gateways have different safe context windows. Adjusting chunk strategy keeps each payload comfortably within limits.
 
----
+**Where:** `Index.App.razor` → `SplitSummaryIntoChunks(string summary)`
 
-## Development tips
-
-* When modifying UI behaviors, watch the timers in `MainLayout.razor` (`ThemeWatcher`, `MessageWatcher`, `CheckForUpdates`).
-* To extend SignalR handling, see `ProcessSignalRUpdate` in `MainLayout.razor` and the server’s `SignalRUpdate` plumbing in `DataController`.
-* If you add new APIs, mirror the style in `DataController.App.*` files and use `ActionResponseObject`/`BooleanResponse` where helpful.
+* The method groups the preamble + each file block and greedily packs them into balanced chunks by **line count**.
+* You can change the target heuristic (lines → characters) or implement a token estimator if you have one.
 
 ---
 
-## Roadmap ideas (suggested)
+## Getting started (dev)
 
-* Finish wiring a polished **plugin model** (runtime load/register).
-* Add **role/permission granularity** beyond Admin/AppAdmin (module/action scopes).
-* Expand built-in **audit logs** and **export/import** for tenant settings.
-* Provide **seed data** & sample migration scripts per provider.
+1. **Clone & open** the solution in Visual Studio / Rider.
+2. **.NET 9 SDK** installed; run Server + Client.
+3. Ensure your account has **AppAdmin** to call file endpoints.
+4. Navigate to the app, open the **Index** page, and enter a repo path (e.g., `C:\src\your-solution`).
+5. Select files, write instructions, choose chunk count, and **Copy** the prepared AI package.
+
+> The framework includes maintenance mode, multi-tenant settings, languages, and SignalR notifications. These exist to support enterprise deployment but are not required for understanding or using the Index workflow.
 
 ---
 
-## Contributing
+## Security & controls
 
-PRs and issues welcome! Keep changes modular by using the provided `*.App.*` extension points where possible.
+* **Access control:** File operations are AppAdmin-gated.
+* **Least privilege:** Endpoint authorization is explicit; no anonymous file reads.
+* **Noisy paths filtered:** Hidden directories and `bin/obj` are excluded.
+* **Token discipline:** Pre-flight line/char counts + chunking reduce overflows.
+
+---
+
+## Roadmap (short list)
+
+* Prompt presets by repo/domain (reusable instruction packs).
+* Export AI outputs/diffs back into the app (optional).
+* Usage analytics (time saved, prompts/week, iteration count).
+* Enterprise SSO/RBAC hardening and audit trail.
+
+---
+
+## FAQ
+
+**Is this an “AI code generator”?**
+No. FreeLLM *prepares* clean, right-sized context and intent for your chosen AI (LLM). It doesn’t replace your LLM; it makes it effective.
+
+**Can we use it with any LLM?**
+Yes—copy the generated “Project Update” into ChatGPT, Azure OpenAI, or your preferred tool.
+
+**What about huge repos?**
+Use filters, folder ignores, and chunking. Unselected files still contribute metadata so AI grasps scope without blowing tokens.
 
 ---
 
 ## License
 
-MIT License see LISCENSE file for details. 
+Open source. See `LICENSE` (or your org’s standard OSS notice).
 
 ---
 
-## Credits
+### Quick reference (endpoints & sample bodies)
 
-Built with ❤️ on:
+```http
+POST ~/{DataObjects.Endpoints.EndpointFileGpt.GetFiles}
+Content-Type: application/json
+{ "Path": "C:\\path\\to\\repo" }
 
-* ASP.NET Core + Blazor
-* EF Core
-* SignalR
-* Bootstrap/MudBlazor/Radzen
-* ThumbmarkJS (device fingerprint)
+POST ~/{DataObjects.Endpoints.EndpointFileGpt.GetFileMetadata}
+Content-Type: application/json
+{ "FilePaths": ["C:\\repo\\Program.cs", "C:\\repo\\App.razor"] }
 
----
+POST ~/{DataObjects.Endpoints.EndpointFileGpt.GetFileContents}
+Content-Type: application/json
+{ "FilePaths": ["C:\\repo\\Program.cs"] }
+```
 
-## Quick start (TL;DR)
+**Core UI:** `FreeLLM.Client/Shared/AppComponents/Index.App.razor`
+**API implementation:** `FreeLLM/Controllers/DataController.App.FreeLLM.cs`
 
-1. `dotnet restore && dotnet build`
-2. Configure a DB connection (use `/Setup` or your `appsettings`).
-3. `dotnet run --project FreeLLM` and open the site.
-4. Create a tenant + admin user, tweak **Settings** (theme, auth), and explore the **File Explorer** on the home page (App Admin only).
+**Customization hotspots:**
+
+* *Check Defaults:* `Index.App.razor` → `CheckDefaults()`
+* *Default filters:* `Index.App.razor` → `fileTypes`, `selectedFileTypes`, `ignoredFolders`, `filterText`
+* *Chunking logic:* `Index.App.razor` → `SplitSummaryIntoChunks()`
+
+**Integration target:** **FreeCRM** (.NET 9): github.com/WSU-EIT/FreeCRM/
+
+**Bottom line:** FreeLLM turns *prompt prep* into a reliable, fast, and repeatable step—so your AI produces better engineering output with less rework.
